@@ -1,0 +1,22 @@
+use db_course_conversions;
+
+with subquery as
+(select e.student_id as student_id,
+		i.date_registered as date_registered,
+        min(e.date_watched) as first_date_watched,
+        min(p.date_purchased) as first_date_purchased,
+        datediff(min(e.date_watched), i.date_registered) as date_diff_reg_watch,
+        datediff(min(p.date_purchased), min(e.date_watched)) as date_diff_watch_purch
+from student_engagement e
+join student_info i on e.student_id = i.student_id
+left join student_purchases p on e.student_id = p.student_id
+group by e.student_id
+having first_date_purchased is null
+		or first_date_watched <= first_date_purchased)
+select (round((count(date_diff_watch_purch)/count(distinct student_id) * 100), 2))
+as conversion_rate,
+round(sum(date_diff_reg_watch)/count(date_registered), 2)
+as avg_reg_watch,
+round(sum(date_diff_watch_purch)/count(first_date_purchased), 2)
+as avg_watch_purch
+from subquery;
